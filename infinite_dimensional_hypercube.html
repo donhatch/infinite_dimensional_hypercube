@@ -13,22 +13,22 @@
     (()=>{
       "use strict";
       console.log("in script");
-      let theG = document.getElementById("theG");
+      const theG = document.getElementById("theG");
       console.log("theG = ",theG);
       let innerHTML = "";
 
-      let circle = (cx,cy,r) => '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" style="stroke:black; fill:white;" />';
-      let seg = (x0,y0,x1,y1) => '<path d="M'+x0+','+y0+' L'+x1+','+y1+'" style="stroke:black; fill:none;" />';
+      const circle = (cx,cy,r) => '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" style="stroke:black; fill:white;" />';
+      const seg = (x0,y0,x1,y1) => '<path d="M'+x0+','+y0+' L'+x1+','+y1+'" style="stroke:black; fill:none;" />';
 
-      let vpv = (a,b) => {
-        let answer = [];
+      const vpv = (a,b) => {
+        const answer = [];
         for (let i = 0; i < a.length; ++i) {
           answer.push(a[i]+b[i]);
         }
         return answer;
       };  // vpv
-      let vxm = (v,m) => {
-        let answer = [];
+      const vxm = (v,m) => {
+        const answer = [];
         for (let i = 0; i < m[0].length; ++i) {
           let sum = 0.;
           for (let j = 0; j < v.length; ++j) {
@@ -40,18 +40,18 @@
         }
         return answer;
       };  // vxm
-      let extrude = (verts0,edges0,extrusionvec) => {
-        let verboseLevel = 0;
+      const extrude = (verts0,edges0,extrusionvec) => {
+        const verboseLevel = 0;
         if (verboseLevel >= 1) console.log("in extrude");
-        let verts = [];
-        let edges = [];
-        for (let vert of verts0) {
+        const verts = [];
+        const edges = [];
+        for (const vert of verts0) {
           verts.push(vert);
         }
-        for (let vert of verts0) {
+        for (const vert of verts0) {
           verts.push(vpv(vert, extrusionvec));
         }
-        for (let edge of edges0) {
+        for (const edge of edges0) {
           edges.push(edge);
         }
         for (let i = 0; i < verts0.length; ++i) {
@@ -68,11 +68,11 @@
         if (verboseLevel >= 1) console.log("out extrude");
         return [verts,edges];
       };  // extrude
-      let vertRadius=3;
-      let seedLength = 40;
+      const vertRadius=3;
+      const seedLength = 40;
 
       // Simple
-      let extrusionvec = [0,seedLength];
+      const extrusionvec = [0,seedLength];
       let extrusionvec1 = extrusionvec;
 
       let fixedVec;
@@ -91,15 +91,22 @@
       let rowsquashmat;
       {
         // We want rowsquashmat such that:
-        //   fixedVec -> fixedVec  (some multiple)
-        //   y axis -> imageOfYaxis (some multiple)
-        //   bisector of fixedVec and y axis -> bisector of fixedVec and imageOfYaxis (some multiple)
+        //   - fixedVec -> fixedVec  (some multiple)
+        //   - y axis -> imageOfYaxis (some multiple)
+        //   - bisector of fixedVec and y axis -> bisector of fixedVec and imageOfYaxis (some multiple)
+        //   - in the limit, extrude followed by this operation should be the identity
+        //
+        // So:
+        //   1. rotate the old bisector to the x axis
+        //   2. scale in y so that old angle turns into new angle
+        //   3. rotate x axis to new bisector
+        //   4. scale so that... ?
       }
 
       if (false) {
         // 0 degrees -> 0 degrees
         // 90 -> 45
-        let fudge = 1;
+        const fudge = 1;
         rowsquashmat = [
           [1,0],
           [Math.sqrt(.5)*fudge,Math.sqrt(.5)*fudge],
@@ -108,7 +115,7 @@
       } else {
         // -45 -> -45
         // 90 degrees -> 45 degrees
-        let fudge = .5;
+        const fudge = .5;
         rowsquashmat = [
           [1+Math.sqrt(.5)*fudge,-1+Math.sqrt(.5)*fudge],
           [Math.sqrt(.5)*fudge,Math.sqrt(.5)*fudge],
@@ -116,7 +123,7 @@
         extrusionvec1 = [seedLength*Math.sqrt(.5)*fudge,-seedLength*Math.sqrt(.5)*fudge]
       }
 
-      let dim = 4;
+      const dim = 4;
       let verts = [[0,0]];
       let edges = [];
       for (let i = 0; i < dim; ++i) {
@@ -131,10 +138,10 @@
           [verts,edges] = extrude(verts, edges, extrusionvec);
       }
 
-      for (let edge of edges) {
+      for (const edge of edges) {
         innerHTML += seg(verts[edge[0]][0], verts[edge[0]][1], verts[edge[1]][0], verts[edge[1]][1]);
       }
-      for (let vert of verts) {
+      for (const vert of verts) {
         innerHTML += circle(vert[0], vert[1], vertRadius);
       }
 
