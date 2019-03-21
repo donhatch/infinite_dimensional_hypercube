@@ -20,237 +20,122 @@
       let circle = (cx,cy,r) => '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" style="stroke:black; fill:white;" />';
       let seg = (x0,y0,x1,y1) => '<path d="M'+x0+','+y0+' L'+x1+','+y1+'" style="stroke:black; fill:none;" />';
 
+      let vpv = (a,b) => {
+        let answer = [];
+        for (let i = 0; i < a.length; ++i) {
+          answer.push(a[i]+b[i]);
+        }
+        return answer;
+      };  // vpv
+      let vxm = (v,m) => {
+        let answer = [];
+        for (let i = 0; i < m[0].length; ++i) {
+          let sum = 0.;
+          for (let j = 0; j < v.length; ++j) {
+            sum += v[j]*m[j][i];
+          }
+          if (m.length > v.length)
+            sum += m[v.length][i];
+          answer.push(sum);
+        }
+        return answer;
+      };  // vxm
+      let extrude = (verts0,edges0,extrusionvec) => {
+        let verboseLevel = 0;
+        if (verboseLevel >= 1) console.log("in extrude");
+        let verts = [];
+        let edges = [];
+        for (let vert of verts0) {
+          verts.push(vert);
+        }
+        for (let vert of verts0) {
+          verts.push(vpv(vert, extrusionvec));
+        }
+        for (let edge of edges0) {
+          edges.push(edge);
+        }
+        for (let i = 0; i < verts0.length; ++i) {
+          edges.push([i, i+verts0.length]);
+        }
+        for (let i = 0; i < edges0.length; ++i) {
+          edges.push([edges0[i][0]+verts0.length, edges0[i][1]+verts0.length]);
+        }
+        if (verboseLevel >= 1) console.log("  verts0 = "+verts0);
+        if (verboseLevel >= 1) console.log("  edges0 = "+edges0);
+        if (verboseLevel >= 1) console.log("  verts = "+verts);
+        if (verboseLevel >= 1) console.log("  edges = "+edges);
+        if (verboseLevel >= 1) console.log("  edges = ",edges);
+        if (verboseLevel >= 1) console.log("out extrude");
+        return [verts,edges];
+      };  // extrude
+      let vertRadius=3;
+      let seedLength = 40;
 
+      // Simple
+      let extrusionvec = [0,seedLength];
+      let extrusionvec1 = extrusionvec;
 
+      let fixedVec;
+      let imageOfYAxis;
+      if (true)
+      {
+        fixedVec = [1,0];
+        imageOfYAxis = [Math.sqrt(.5),Math.sqrt(.5)];
+      }
+
+      if (true)  // set to true to put an edge right on the fixed direction
+      {
+          extrusionvec1 = fixedVec;
+      }
+
+      let rowsquashmat;
+      {
+        // We want rowsquashmat such that:
+        //   fixedVec -> fixedVec  (some multiple)
+        //   y axis -> imageOfYaxis (some multiple)
+        //   bisector of fixedVec and y axis -> bisector of fixedVec and imageOfYaxis (some multiple)
+      }
 
       if (false) {
-        let calcLastTranslations = (maxDim,seedLength) => {
-          let answer = [[0,0]];
-
-          let golden = (Math.sqrt(5)+1)/2;
-          //let angle = Math.PI/8 * (golden-1);
-          let angle = Math.PI/4 * (golden-1);
-          //let angle = Math.PI/2 * (golden-1);
-          //let angle = Math.PI * (golden-1);  // XXX wait a minute, wtf? why is this coming out so regular looking
-          //let angle = 2*Math.PI * (golden-1);  // XXX wait a minute, wtf? why is this coming out so regular looking
-          let s = Math.sin(angle)*Math.sqrt(2);
-          let c = Math.cos(angle)*Math.sqrt(2);
-          console.log("s = "+s);
-          console.log("c = "+c);
-
-          for (let i = 1; i <= maxDim; ++i) {
-            if (i === 1) {
-              answer.push([seedLength,0]);
-            } else {
-              let t = answer[answer.length-1];
-              answer.push([
-                c*t[0] - s*t[1],
-                s*t[0] + c*t[1],
-              ]);
-            }
-          }
-          return answer;
-        };
-
-        let calcVerts = (dim, seedLength) => {
-          let answer = [[0,0]];
-          for (let i = 1; i <= dim; ++i) {
-            //console.log("  top of loop");
-            //console.log("    answer = ",answer);
-            //console.log("    translation = ",translation);
-            let newAnswer = [];
-            for (let j = 0; j < answer.length; ++j) {
-                newAnswer.push(answer[j]);
-            }
-            for (let j = 0; j < answer.length; ++j) {
-                newAnswer.push([answer[j][0]+lastTranslations[i][0],
-                                answer[j][1]+lastTranslations[i][1]]);
-            }
-            answer = newAnswer;
-          }
-          return answer;
-        };
-        let calcEdges = (dim, seedLength) => {
-          if (dim === 0) return [];
-          let answer = [];
-          let verts0 = calcVerts(dim-1, seedLength);
-          let edges0 = calcEdges(dim-1, seedLength);
-          // lower dimensional edges
-          for (let i = 0; i < edges0.length; ++i) {
-            answer.push(edges0[i]);
-          }
-          // lower dimensional edge translated by translation
-          for (let i = 0; i < edges0.length; ++i) {
-            answer.push([edges0[i][0]+lastTranslations[dim][0],
-                         edges0[i][1]+lastTranslations[dim][1],
-                         edges0[i][2]+lastTranslations[dim][0],
-                         edges0[i][3]+lastTranslations[dim][1]]);
-          }
-          // lower dimensional verts connected to lower-dimensional-verts-translated-by-translation
-          for (let i = 0; i < verts0.length; ++i) {
-            answer.push([
-                verts0[i][0],
-                verts0[i][1],
-                verts0[i][0]+lastTranslations[dim][0],
-                verts0[i][1]+lastTranslations[dim][1],
-            ]);
-          }
-          return answer;
-        };
-
-        let lastEdgesString = (dim,x0,y0,indentLevel) => {
-          let verboseLevel = 0;
-          if (verboseLevel >= 1) console.log("    ".repeat(indentLevel)+"    in lastEdgesString: dim="+dim+", x0="+x0+", y0="+y0+")");
-          let verts0 = calcVerts(dim-1, seedLength);
-          let answer = "";
-          for (let i = 0; i < verts0.length; ++i) {
-            answer += seg(x0+verts0[i][0],
-                          y0+verts0[i][1],
-                          x0+verts0[i][0]+lastTranslations[dim][0],
-                          y0+verts0[i][1]+lastTranslations[dim][1]);
-          }
-          if (verboseLevel >= 1) console.log("    ".repeat(indentLevel)+"      answer = "+answer);
-          if (verboseLevel >= 1) console.log("    ".repeat(indentLevel)+"    out lastEdgesString: dim="+dim+", x0="+x0+", y0="+y0+")");
-          return answer;
-        };
-        let cubeString = (dim,x0,y0,indentLevel) => {
-          let verboseLevel = 0;
-          if (verboseLevel >= 1) console.log("    ".repeat(indentLevel)+"    in cubeString(dim="+dim+", x0="+x0+", y0="+y0+")");
-          if (dim === 0)
-          {
-            let answer = circle(x0,y0,vertRadius);
-            if (verboseLevel >= 1) console.log("    ".repeat(indentLevel)+"    out cubeString(dim="+dim+", x0="+x0+", y0="+y0+"), returning "+answer+"");
-            return answer;
-          }
-          let answer = "";
-          let firstPart = cubeString(dim-1,x0,y0,indentLevel+1);
-          let secondPart = lastEdgesString(dim,x0,y0,indentLevel+1);
-          let thirdPart = cubeString(dim-1,x0+lastTranslations[dim][0],y0+lastTranslations[dim][1],indentLevel+1);
-          answer += firstPart;
-          answer += secondPart;
-          answer += thirdPart;
-          if (true) {
-            // overwrite with last verts.
-            // CBB: this is very wasteful, since we already drew them
-            let lastVerts = calcVerts(dim-1,seedLength);
-            if (verboseLevel >= 1) console.log("    ".repeat(indentLevel)+"      lastVerts.length = "+lastVerts.length);
-            for (let i = 0; i < lastVerts.length; ++i) {
-                answer += circle(x0+lastVerts[i][0]+lastTranslations[dim][0], y0+lastVerts[i][1]+lastTranslations[dim][1], vertRadius);
-            }
-          }
-          // XXXXX why is the red circle for dim==1 coming out *after* the last edges for dim==2?
-          //      PA: it must be coming out as part of that last cubeString, which is obviously wrong.
-          if (verboseLevel >= 1) console.log("    ".repeat(indentLevel)+"    out cubeString(dim="+dim+", x0="+x0+", y0="+y0+")");
-          return answer;
-        };
-
-
-
-        let vertRadius=3;
-        let seedLength = 10;
-        let dim = 5;
-        let lastTranslations = calcLastTranslations(dim,seedLength);
-        console.log("lastTranslations = "+lastTranslations);
-
-        innerHTML = cubeString(dim,0,0,0);
+        // 0 degrees -> 0 degrees
+        // 90 -> 45
+        let fudge = 1;
+        rowsquashmat = [
+          [1,0],
+          [Math.sqrt(.5)*fudge,Math.sqrt(.5)*fudge],
+        ];
+        extrusionvec1 = [seedLength,0];
       } else {
-        let vpv = (a,b) => {
-          let answer = [];
-          for (let i = 0; i < a.length; ++i) {
-            answer.push(a[i]+b[i]);
-          }
-          return answer;
-        };  // vpv
-        let vxm = (v,m) => {
-          let answer = [];
-          for (let i = 0; i < m[0].length; ++i) {
-            let sum = 0.;
-            for (let j = 0; j < v.length; ++j) {
-              sum += v[j]*m[j][i];
-            }
-            if (m.length > v.length)
-              sum += m[v.length][i];
-            answer.push(sum);
-          }
-          return answer;
-        };  // vxm
-        let extrude = (verts0,edges0,extrusionvec) => {
-          let verboseLevel = 0;
-          if (verboseLevel >= 1) console.log("in extrude");
-          let verts = [];
-          let edges = [];
-          for (let vert of verts0) {
-            verts.push(vert);
-          }
-          for (let vert of verts0) {
-            verts.push(vpv(vert, extrusionvec));
-          }
-          for (let edge of edges0) {
-            edges.push(edge);
-          }
-          for (let i = 0; i < verts0.length; ++i) {
-            edges.push([i, i+verts0.length]);
-          }
-          for (let i = 0; i < edges0.length; ++i) {
-            edges.push([edges0[i][0]+verts0.length, edges0[i][1]+verts0.length]);
-          }
-          if (verboseLevel >= 1) console.log("  verts0 = "+verts0);
-          if (verboseLevel >= 1) console.log("  edges0 = "+edges0);
-          if (verboseLevel >= 1) console.log("  verts = "+verts);
-          if (verboseLevel >= 1) console.log("  edges = "+edges);
-          if (verboseLevel >= 1) console.log("  edges = ",edges);
-          if (verboseLevel >= 1) console.log("out extrude");
-          return [verts,edges];
-        };  // extrude
-        let vertRadius=3;
-        let seedLength = 40;
+        // -45 -> -45
+        // 90 degrees -> 45 degrees
+        let fudge = .5;
+        rowsquashmat = [
+          [1+Math.sqrt(.5)*fudge,-1+Math.sqrt(.5)*fudge],
+          [Math.sqrt(.5)*fudge,Math.sqrt(.5)*fudge],
+        ];
+        extrusionvec1 = [seedLength*Math.sqrt(.5)*fudge,-seedLength*Math.sqrt(.5)*fudge]
+      }
 
-        // Simple
-        let extrusionvec = [0,seedLength];
-        let extrusionvec1 = extrusionvec;
+      let dim = 4;
+      let verts = [[0,0]];
+      let edges = [];
+      for (let i = 0; i < dim; ++i) {
+        // First squash
+        for (let j = 0; j < verts.length; ++j) {
+          verts[j] = vxm(verts[j], rowsquashmat);
+        }
+        // Then extrude
+        if (i == 0)
+          [verts,edges] = extrude(verts, edges, extrusionvec1);
+        else
+          [verts,edges] = extrude(verts, edges, extrusionvec);
+      }
 
-        let rowsquashmat;
-        if (false) {
-          // 0 degrees -> 0 degrees
-          // 90 -> 45
-          let fudge = 1;
-          rowsquashmat = [
-            [1,0],
-            [Math.sqrt(.5)*fudge,Math.sqrt(.5)*fudge],
-          ];
-          extrusionvec1 = [seedLength,0];
-        } else {
-          // -45 -> -45
-          // 90 degrees -> 45 degrees
-          let fudge = .5;
-          rowsquashmat = [
-            [1+Math.sqrt(.5)*fudge,-1+Math.sqrt(.5)*fudge],
-            [Math.sqrt(.5)*fudge,Math.sqrt(.5)*fudge],
-          ];
-          extrusionvec1 = [seedLength*Math.sqrt(.5)*fudge,-seedLength*Math.sqrt(.5)*fudge]
-        }
-
-        let dim = 6;
-        let verts = [[0,0]];
-        let edges = [];
-        for (let i = 0; i < dim; ++i) {
-          // First squash
-          for (let j = 0; j < verts.length; ++j) {
-            verts[j] = vxm(verts[j], rowsquashmat);
-          }
-          // Then extrude
-          if (i == 0)
-            [verts,edges] = extrude(verts, edges, extrusionvec1);
-          else
-            [verts,edges] = extrude(verts, edges, extrusionvec);
-        }
-
-        for (let edge of edges) {
-          innerHTML += seg(verts[edge[0]][0], verts[edge[0]][1], verts[edge[1]][0], verts[edge[1]][1]);
-        }
-        for (let vert of verts) {
-          innerHTML += circle(vert[0], vert[1], vertRadius);
-        }
+      for (let edge of edges) {
+        innerHTML += seg(verts[edge[0]][0], verts[edge[0]][1], verts[edge[1]][0], verts[edge[1]][1]);
+      }
+      for (let vert of verts) {
+        innerHTML += circle(vert[0], vert[1], vertRadius);
       }
 
       theG.innerHTML = innerHTML;
