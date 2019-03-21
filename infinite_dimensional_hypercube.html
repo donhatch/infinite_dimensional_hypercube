@@ -20,10 +20,38 @@
       const circle = (cx,cy,r) => '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" style="stroke:black; fill:white;" />';
       const seg = (x0,y0,x1,y1) => '<path d="M'+x0+','+y0+' L'+x1+','+y1+'" style="stroke:black; fill:none;" />';
 
+
+
+      const DTOR = d => d/180.*Math.PI;
+      const lerp = (a,b,t) => (1.-t)*a + t*b;
+      const dot = (a,b) => {
+        let answer = 0.;
+        for (let i = 0; i < a.length; ++i) {
+          answer += a[i]*b[i];
+        }
+        return answer;
+      };  // dot
+      const length2 = v => dot(v,v);
+      const length = v => Math.sqrt(length2(v));
+      const normalized = v => vxs(v, 1./length(v));
+      const vxs = (v,s) => {
+        const answer = [];
+        for (let i = 0; i < v.length; ++i) {
+          answer.push(v[i]*s);
+        }
+        return answer;
+      };  // vxs
       const vpv = (a,b) => {
         const answer = [];
         for (let i = 0; i < a.length; ++i) {
           answer.push(a[i]+b[i]);
+        }
+        return answer;
+      };  // vpv
+      const vmv = (a,b) => {
+        const answer = [];
+        for (let i = 0; i < a.length; ++i) {
+          answer.push(a[i]-b[i]);
         }
         return answer;
       };  // vpv
@@ -40,109 +68,244 @@
         }
         return answer;
       };  // vxm
-      const extrude = (verts0,edges0,extrusionvec) => {
-        const verboseLevel = 0;
-        if (verboseLevel >= 1) console.log("in extrude");
-        const verts = [];
-        const edges = [];
-        for (const vert of verts0) {
-          verts.push(vert);
+      const mxm = (a,b) => {
+        const answer = [];
+        for (let i = 0; i < a.length; ++i) {
+          answer.push(vxm(a[i], b));
         }
-        for (const vert of verts0) {
-          verts.push(vpv(vert, extrusionvec));
-        }
-        for (const edge of edges0) {
-          edges.push(edge);
-        }
-        for (let i = 0; i < verts0.length; ++i) {
-          edges.push([i, i+verts0.length]);
-        }
-        for (let i = 0; i < edges0.length; ++i) {
-          edges.push([edges0[i][0]+verts0.length, edges0[i][1]+verts0.length]);
-        }
-        if (verboseLevel >= 1) console.log("  verts0 = "+verts0);
-        if (verboseLevel >= 1) console.log("  edges0 = "+edges0);
-        if (verboseLevel >= 1) console.log("  verts = "+verts);
-        if (verboseLevel >= 1) console.log("  edges = "+edges);
-        if (verboseLevel >= 1) console.log("  edges = ",edges);
-        if (verboseLevel >= 1) console.log("out extrude");
-        return [verts,edges];
-      };  // extrude
-      const vertRadius=3;
-      const seedLength = 40;
+        return answer;
+      };  // mxm
+      const mxmxm = (a,b,c) => mxm(mxm(a,b),c);
+      let rotrowmat = angle => {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        return [[c,s], [-s,c]];
+      };  // rotrowmat
+      let angleBetweenUnitVectors = (u,v) => dot(u,v) < 0. ? Math.PI - 2*Math.asin(length(vpv(u,v))/2.)
+                                                           : 2*Math.asin(length(vmv(u,v))/2.);
 
-      // Simple
-      const extrusionvec = [0,seedLength];
-      let extrusionvec1 = extrusionvec;
-
-      let fixedVec;
-      let imageOfYAxis;
-      if (true)
-      {
-        fixedVec = [1,0];
-        imageOfYAxis = [Math.sqrt(.5),Math.sqrt(.5)];
-      }
-
-      if (true)  // set to true to put an edge right on the fixed direction
-      {
-          extrusionvec1 = fixedVec;
-      }
-
-      let rowsquashmat;
-      {
-        // We want rowsquashmat such that:
-        //   - fixedVec -> fixedVec  (some multiple)
-        //   - y axis -> imageOfYaxis (some multiple)
-        //   - bisector of fixedVec and y axis -> bisector of fixedVec and imageOfYaxis (some multiple)
-        //   - in the limit, extrude followed by this operation should be the identity
-        //
-        // So:
-        //   1. rotate the old bisector to the x axis
-        //   2. scale in y so that old angle turns into new angle
-        //   3. rotate x axis to new bisector
-        //   4. scale so that... ?
-      }
 
       if (false) {
-        // 0 degrees -> 0 degrees
-        // 90 -> 45
-        const fudge = 1;
-        rowsquashmat = [
-          [1,0],
-          [Math.sqrt(.5)*fudge,Math.sqrt(.5)*fudge],
-        ];
-        extrusionvec1 = [seedLength,0];
-      } else {
-        // -45 -> -45
-        // 90 degrees -> 45 degrees
-        const fudge = .5;
-        rowsquashmat = [
-          [1+Math.sqrt(.5)*fudge,-1+Math.sqrt(.5)*fudge],
-          [Math.sqrt(.5)*fudge,Math.sqrt(.5)*fudge],
-        ];
-        extrusionvec1 = [seedLength*Math.sqrt(.5)*fudge,-seedLength*Math.sqrt(.5)*fudge]
-      }
+        const extrude = (verts0,edges0,extrusionvec) => {
+          const verboseLevel = 0;
+          if (verboseLevel >= 1) console.log("in extrude");
+          const verts = [];
+          const edges = [];
+          for (const vert of verts0) {
+            verts.push(vert);
+          }
+          for (const vert of verts0) {
+            verts.push(vpv(vert, extrusionvec));
+          }
+          for (const edge of edges0) {
+            edges.push(edge);
+          }
+          for (let i = 0; i < verts0.length; ++i) {
+            edges.push([i, i+verts0.length]);
+          }
+          for (let i = 0; i < edges0.length; ++i) {
+            edges.push([edges0[i][0]+verts0.length, edges0[i][1]+verts0.length]);
+          }
+          if (verboseLevel >= 1) console.log("  verts0 = "+verts0);
+          if (verboseLevel >= 1) console.log("  edges0 = "+edges0);
+          if (verboseLevel >= 1) console.log("  verts = "+verts);
+          if (verboseLevel >= 1) console.log("  edges = "+edges);
+          if (verboseLevel >= 1) console.log("  edges = ",edges);
+          if (verboseLevel >= 1) console.log("out extrude");
+          return [verts,edges];
+        };  // extrude
+        const vertRadius = 3;
+        const seedLength = 40;
 
-      const dim = 4;
-      let verts = [[0,0]];
-      let edges = [];
-      for (let i = 0; i < dim; ++i) {
-        // First squash
-        for (let j = 0; j < verts.length; ++j) {
-          verts[j] = vxm(verts[j], rowsquashmat);
+        // Simple
+        const extrusionvec = [0,seedLength];
+        let extrusionvec1 = extrusionvec;
+
+        let fixedVec;
+        let imageOfYAxis;
+        if (false) {
+          fixedVec = [1,0];      // x axis
+          imageOfYAxis = [1,1];  // 45 degrees
+        } else if (true) {
+          fixedVec = [1,-1];     // -45 degrees
+          imageOfYAxis = [1,1];  // 45 degrees
         }
-        // Then extrude
-        if (i == 0)
-          [verts,edges] = extrude(verts, edges, extrusionvec1);
-        else
-          [verts,edges] = extrude(verts, edges, extrusionvec);
+
+        // Make sure they are normalized
+        fixedVec = normalized(fixedVec);
+        imageOfYAxis = normalized(imageOfYAxis);
+
+        const putFirstEdgeOnFixedDirection = false;
+        if (putFirstEdgeOnFixedDirection)
+        {
+            extrusionvec1 = vxs(fixedVec, seedLength);
+        }
+
+        let rowsquashmat;
+        {
+          // We want rowsquashmat such that:
+          //   - fixedVec -> fixedVec  (some multiple)
+          //   - y axis -> imageOfYaxis (some multiple)
+          //   - bisector of fixedVec and y axis -> bisector of fixedVec and imageOfYaxis (some multiple)
+          //   - in the limit, extrude followed by this operation should be the identity
+          //
+          // So:
+          //   1. rotate the old bisector to the x axis
+          //   2. scale in y so that old angle turns into new angle
+          //   3. rotate x axis to new bisector
+          //   4. scale so that... ?  (as placeholder, just scale so that max x is at most, say, .5  (times whole circle radius)
+          const yAxis = [0,1];
+          const oldBisector = normalized(vpv(fixedVec, yAxis));
+          const newBisector = normalized(vpv(fixedVec, imageOfYAxis));
+          const oldBisectorDirAngle = Math.atan2(oldBisector[1], oldBisector[0]);
+          const newBisectorDirAngle = Math.atan2(newBisector[1], newBisector[0]);
+          const rotateOldBisectorToXaxis = rotrowmat(-oldBisectorDirAngle);
+          const rotateXaxisToNewBisector = rotrowmat(newBisectorDirAngle);
+          const oldAngleSpan = angleBetweenUnitVectors(fixedVec, yAxis);
+          const newAngleSpan = angleBetweenUnitVectors(fixedVec, imageOfYAxis);
+          const scalemat = [
+            [Math.cos(newAngleSpan/2.)/Math.cos(oldAngleSpan/2.), 0],
+            [0, Math.sin(newAngleSpan/2.)/Math.sin(oldAngleSpan/2.)],
+          ];
+          const m = mxmxm(rotateOldBisectorToXaxis,
+                          scalemat,
+                          rotateXaxisToNewBisector);
+
+          if (false) {  // XXX was hoping to precompute the magic scale, but I'm not sure this actually works
+            let v = [0,0];
+            for (let i = 0; i < 10; ++i)
+            {
+                v = vpv(v, [0,.125]);
+                let newV = vxm(v, m);
+                console.log("  "+i+": "+v+" -> "+newV+"");
+                v = newV;
+            }
+          }
+          rowsquashmat = m;
+        }
+
+        console.log("rowsquashmat = "+rowsquashmat);
+        console.log("extrusionvec1 = "+extrusionvec1);
+        console.log("extrusionvec = "+extrusionvec);
+
+        const calcMaxx = verts => {
+          let answer = -1000.;  // cbb
+          for (let i = 0; i < verts.length; ++i) {
+            answer = Math.max(answer, verts[i][0]);
+          }
+          return answer;
+        };  // calcMaxx
+
+        const dim = 13;
+        let verts = [[0,0]];
+        let edges = [];
+        for (let i = 0; i < dim; ++i) {
+          // First squash
+          for (let j = 0; j < verts.length; ++j) {
+            verts[j] = vxm(verts[j], rowsquashmat);
+          }
+          // Then clamp
+          {
+            let xMax = calcMaxx(verts);
+            console.log("xMax = "+xMax);
+            const xMaxMax = 200;
+            if (xMax > xMaxMax) {
+              for (let j = 0; j < verts.length; ++j) {
+                verts[j] = vxs(verts[j], xMaxMax/xMax);
+              }
+            }
+            xMax = calcMaxx(verts);
+            console.log("xMax = "+xMax);
+            console.log("====");
+          }
+          // Then extrude
+          if (i == 0) {
+            // going from 0 to 1 dimension
+            [verts,edges] = extrude(verts, edges, extrusionvec1);
+          } else {
+            [verts,edges] = extrude(verts, edges, extrusionvec);
+          }
+          //console.log("bottom of loop: verts="+verts);
+        }
+
+        for (const edge of edges) {
+          innerHTML += seg(verts[edge[0]][0], verts[edge[0]][1], verts[edge[1]][0], verts[edge[1]][1]);
+        }
+        for (const vert of verts) {
+          innerHTML += circle(vert[0], vert[1], vertRadius);
+        }
+      }  // if
+
+
+      let makeHypercubeFromBasisVecs = basisVecs => {
+        let coords = [];
+        let n = 1<<basisVecs.length;
+        for (let i = 0; i < n; ++i) {
+          let coord = [0,0];
+          for (let j = 0; j < basisVecs.length; ++j)
+          {
+            if (((i>>j)&1) !== 0) {
+              coord = vpv(coord, basisVecs[j]);
+            }
+          }
+          coords.push(coord);
+        }
+
+        let vertsAndEdges = [];
+
+        // Add all the edges.
+        for (let dir = 0; dir < basisVecs.length; ++dir)
+        {
+          for (let i = 0; i < n; ++i) {
+            if (((i>>dir)&1) === 0) {
+              vertsAndEdges.push([i, i+(1<<dir)]);
+            }
+          }
+        }
+
+        // Add all the verts
+        for (let i = 0; i < n; ++i) {
+          vertsAndEdges.push([i]);
+        }
+
+        return [coords,vertsAndEdges];
+      };  // makeHypercubeFromBasisVecs
+
+
+      const dim = 9;
+      const vertRadius = 2.5;
+      const seedLength = 100;
+
+      const anglesDegrees = [];
+      //const targetAngleDegrees = 0.;
+      const targetAngleDegrees = -90.;
+      //const targetAngleDegrees = -180.;
+      const frac = .25;
+      //const shrink = Math.pow(.5, 1.2);
+      const shrink = .6;
+      for (let i = 0; i < dim; ++i) {
+        if (i === 0) {
+            anglesDegrees.push(90.);
+        } else {
+            anglesDegrees.push(lerp(anglesDegrees[anglesDegrees.length-1], targetAngleDegrees, frac));
+        }
+      }
+      const basisVecs = [];
+      for (let i = 0; i < anglesDegrees.length; ++i) {
+        basisVecs.push(vxs([seedLength*Math.cos(DTOR(anglesDegrees[i])), seedLength*Math.sin(DTOR(anglesDegrees[i]))],
+                           Math.pow(shrink, i)));
       }
 
-      for (const edge of edges) {
-        innerHTML += seg(verts[edge[0]][0], verts[edge[0]][1], verts[edge[1]][0], verts[edge[1]][1]);
-      }
-      for (const vert of verts) {
-        innerHTML += circle(vert[0], vert[1], vertRadius);
+      const [coords,vertsAndEdges] = makeHypercubeFromBasisVecs(basisVecs);
+
+
+      for (const vertOrEdge of vertsAndEdges) {
+        if (vertOrEdge.length === 1) {
+          // its actually a vertex
+          innerHTML += circle(coords[vertOrEdge[0]][0], coords[vertOrEdge[0]][1], vertRadius);
+        } else {
+          innerHTML += seg(coords[vertOrEdge[0]][0], coords[vertOrEdge[0]][1], coords[vertOrEdge[1]][0], coords[vertOrEdge[1]][1]);
+        }
       }
 
       theG.innerHTML = innerHTML;
